@@ -11,6 +11,7 @@ import {
   Table,
 } from "antd";
 import { render } from "./logics/render-liquid.ts";
+import useSWR from "swr";
 
 const initialDummyData = {
   products: [
@@ -66,59 +67,39 @@ const useRenderer = (template: string, variables: Variables) => {
   return { renderResult };
 };
 
-const useDeserializedData = ({
-  setTemplate,
-  setVariables,
-}: {
-  setTemplate: (template: string) => void;
-  setVariables: (variables: Variables) => void;
-}) => {
-  const [initialized, setInitialized] = useState(false);
-
-  useEffect(() => {
-    if (initialized) {
-      return;
-    }
-    try {
-      const url = new URL(window.location.href);
-      const data = url.searchParams.get("data");
-      if (!data) {
-        return;
-      }
-      import("./logics/data-serializer.ts").then(({ deserializeData }) =>
-        deserializeData(data)
-          .then((d) => {
-            const { variables, template } = JSON.parse(d);
-            console.log({ variables, template });
-            setVariables(variables);
-            setTemplate(template);
-          })
-          .finally(() => {
-            setInitialized(true);
-          }),
-      );
-    } finally {
-      setInitialized(true);
-    }
-  }, [initialized, setTemplate, setVariables]);
+const deserializeData = () => {
+  const url = new URL(window.location.href);
+  const data = url.searchParams.get("data");
+  if (!data) {
+    return;
+  }
+  return import("./logics/data-serializer.ts").then(({ deserializeData }) =>
+    deserializeData(data).then((d) => {
+      const { variables, template } = JSON.parse(d);
+      return { variables, template };
+    }),
+  );
 };
 
-const RendererForm = () => {
+const RendererForm = (props: {
+  initialTemplate: string | undefined;
+  initialVariables: Variables | undefined;
+}) => {
   const [addVariableName, setAddVariableName] = useState("");
   const [addVariableValue, setAddVariableValue] = useState("");
 
   const [template, setTemplate] = useState(
-    `
+    props.initialTemplate ??
+      `
 {%- for product in products -%}
   {{ product.name }} is {{ product.price | times: 0.8 | money }} yen{% if forloop.last %}.{% else %}, {% endif %}
 {%- endfor -%}
   `.trim(),
   );
 
-  const { variables, setVariable, deleteVariable, setVariables } =
-    useVariables(initialDummyData);
-
-  useDeserializedData({ setTemplate, setVariables });
+  const { variables, setVariable, deleteVariable } = useVariables(
+    props.initialVariables ?? initialDummyData,
+  );
 
   const { renderResult } = useRenderer(template, variables);
 
@@ -237,6 +218,29 @@ const RendererForm = () => {
 };
 
 export const App = () => {
+  const [isDataReady, setIsDataReady] = useState(false);
+  const { data: dataFromUrl, isLoading } = useSWR(
+    "dataFromUrl",
+    deserializeData,
+    {
+      revalidateOnMount: true,
+      refreshWhenHidden: false,
+      refreshWhenOffline: false,
+      refreshInterval: 0,
+      errorRetryCount: 0,
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    },
+  );
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+    setIsDataReady(true);
+  }, [isLoading]);
+
   return (
     <Layout style={{ height: "100vh", width: "100%" }}>
       <Layout.Header
@@ -253,7 +257,12 @@ export const App = () => {
       </Layout.Header>
 
       <Layout.Content style={{ padding: "1rem" }}>
-        <RendererForm />
+        {isDataReady && (
+          <RendererForm
+            initialVariables={dataFromUrl?.variables}
+            initialTemplate={dataFromUrl?.template}
+          />
+        )}
       </Layout.Content>
     </Layout>
   );
