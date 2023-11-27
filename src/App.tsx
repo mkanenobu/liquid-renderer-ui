@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 import {
   Typography,
@@ -79,7 +79,7 @@ export const App = () => {
         }}
       >
         <Typography.Title style={{ color: "white" }}>
-          Liquid Template Renderer
+          Liquid Renderer UI
         </Typography.Title>
       </Layout.Header>
 
