@@ -213,6 +213,18 @@ const RendererForm = (props: {
       >
         Copy with Data
       </Button>
+
+      <div style={{ marginTop: "1rem" }}>
+        <Typography.Text>
+          Liquid document:{" "}
+          <Typography.Link
+            href={"https://shopify.github.io/liquid/"}
+            target={"_blank"}
+          >
+            https://shopify.github.io/liquid/
+          </Typography.Link>
+        </Typography.Text>
+      </div>
     </Form>
   );
 };
