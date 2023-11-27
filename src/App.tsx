@@ -251,7 +251,7 @@ export const App = () => {
           alignItems: "center",
         }}
       >
-        <Typography.Title style={{ color: "white" }}>
+        <Typography.Title style={{ color: "white", margin: 0 }}>
           Liquid Renderer UI
         </Typography.Title>
       </Layout.Header>
